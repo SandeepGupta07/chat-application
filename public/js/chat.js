@@ -1,25 +1,31 @@
 let socket = io();
+const config = {
+  'iceServers': [{
+    'urls': ['stun:stun.l.google.com:19302']
+  }]
+};
 
 function scrollToBottom() {
   let messages = document.querySelector('#messages').lastElementChild;
   messages.scrollIntoView();
 }
 
-socket.on('connect', function() {
+socket.on('connect', function () {
   let searchQuery = window.location.search.substring(1);
-  let params = JSON.parse('{"' + decodeURI(searchQuery).replace(/&/g, '","').replace(/\+/g, ' ').replace(/=/g,'":"') + '"}');
+  let params = JSON.parse('{"' + decodeURI(searchQuery).replace(/&/g, '","').replace(/\+/g, ' ').replace(/=/g, '":"') + '"}');
 
-  socket.emit('join', params, function(err) {
-    if(err){
+  socket.emit('join', params, function (err) {
+    if (err) {
       alert(err);
       window.location.href = '/';
-    }else {
+    } else {
       console.log('No Error');
     }
   })
 });
 
-socket.on('disconnect', function() {
+
+socket.on('disconnect', function () {
   console.log('disconnected from server.');
 });
 
@@ -37,7 +43,7 @@ socket.on('updateUsersList', function (users) {
   usersList.appendChild(ol);
 })
 
-socket.on('newMessage', function(message) {
+socket.on('newMessage', function (message) {
   const formattedTime = moment(message.createdAt).format('LT');
   const template = document.querySelector('#message-template').innerHTML;
   const html = Mustache.render(template, {
@@ -53,7 +59,7 @@ socket.on('newMessage', function(message) {
   scrollToBottom();
 });
 
-socket.on('newLocationMessage', function(message) {
+socket.on('newLocationMessage', function (message) {
   const formattedTime = moment(message.createdAt).format('LT');
   console.log("newLocationMessage", message);
 
@@ -71,27 +77,45 @@ socket.on('newLocationMessage', function(message) {
   scrollToBottom();
 });
 
-document.querySelector('#submit-btn').addEventListener('click', function(e) {
+document.querySelector('#submit-btn').addEventListener('click', function (e) {
   e.preventDefault();
 
   socket.emit("createMessage", {
     text: document.querySelector('input[name="message"]').value
-  }, function() {
+  }, function () {
     document.querySelector('input[name="message"]').value = '';
   })
 })
 
-document.querySelector('#send-location').addEventListener('click', function(e) {
+document.querySelector('#send-location').addEventListener('click', function (e) {
   if (!navigator.geolocation) {
     return alert('Geolocation is not supported by your browser.')
   }
 
-  navigator.geolocation.getCurrentPosition(function(position) {
+  navigator.geolocation.getCurrentPosition(function (position) {
     socket.emit('createLocationMessage', {
       lat: position.coords.latitude,
       lng: position.coords.longitude
     })
-  }, function() {
+  }, function () {
     alert('Unable to fetch location.')
   })
 });
+
+document.querySelector('#screen-share').addEventListener('click', async () => {
+  try {
+    const userid = socket.id;
+    const mediaStream = await navigator.mediaDevices.getDisplayMedia({
+      video: { cursor: 'always' },
+      audio: false
+    })
+    const video = document.getElementById('localVideo');
+    video.srcObject = mediaStream;
+    
+  } catch (error) {
+    console.log("Somethng Went Wrong ", error);
+  }
+})
+
+
+
